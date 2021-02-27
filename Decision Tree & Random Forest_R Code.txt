@@ -1,0 +1,253 @@
+########## 범죄논문 : 의사결정나무(Decision Tree) ##########
+
+##### 데이터 불러오기
+
+library(readxl)
+
+data <- data.frame(read_excel("C:/Users/JU/Desktop/내 정보/논문/범죄 논문/범죄 데이터(원본).xlsx", sheet=1))
+
+
+
+
+
+##### 기술통계분석
+
+### 결측치를 한개라도 포함하고 있는 변수 파악
+
+colSums(is.na(data)) # 11개 변수
+
+
+
+
+
+##### 데이터 전처리
+
+### 범주형 변수 범주화 & 숫자형 변수 숫자화
+
+str(data)
+
+data <- data.frame(재범여부=as.factor(data$재범여부), 최초입건죄명=as.factor(data$최초입건죄명.처음범죄를저지른죄의유형....성범죄.1...성범죄이외의범죄.0.), 성범죄전력_3회이상=as.factor(data$성범죄전력_3회이상), 본건이전_성범죄재범여부=as.factor(data$본건이전_성범죄재범여부), 
+                       본건이전_처분변경_취소여부=as.factor(data$본건이전_처분변경_취소여부.보호처분이내려진상황에서보호처분을더강하게받아야하거나..낮게조정을하기위해처분을변경한전력.), 동일피해자_2회이상성범죄=as.factor(data$동일피해자_2회이상성범죄.동일피해자에게.2회이상성범죄를저지른전력.),
+                       본건_공범유무=as.factor(data$본건_공범유무), 대인관계정보=as.factor(data$대인관계정보), 일탈적성적관심여부=as.factor(data$일탈적성적관심여부.성인보다아동을좋아한다던가..남성을좋아하거나등.), 과거성범죄이력=as.factor(data$과거성범죄이력), 정신질환이력여부=as.factor(data$정신질환이력여부),
+                       인지능력문제여부=as.factor(data$인지능력문제여부.사리분별.사람..물건을구별.을못하는문제를보이는등인지적으로문제가발생한경우.), 성매매경험여부=as.factor(data$성매매경험여부), 약물경험여부=as.factor(data$약물경험여부.알코올제외..마약성분.), 보호처분이력=as.factor(data$보호처분이력.보호처분을받은적이있는지에대한여부.),
+                       직업정보=as.factor(data$직업정보), 범행인정여부=as.factor(data$범행인정여부.자신이저지른범죄를인정했는지의여부.), 범행동기=as.factor(data$범행동기), 범행당시_음주여부=as.factor(data$범행당시_음주여부), 범행장소=as.factor(data$범행장소),
+                       KSORAS_1=as.factor(data$피검사자의.만나이.KSORAS_1.), KSORAS_2=as.factor(data$혼인관계.KSORAS_2.), KSORAS_3=as.factor(data$최초.경찰.입건.나이.KSORAS_3.), KSORAS_4=as.factor(data$본.범죄의.유형.KSORAS_4.), KSORAS_5_1=as.factor(data$성범죄.횟수.본건.제외.성범죄.횟수.KSORAS_5.1..),
+                       KSORAS_5_2=as.factor(data$성범죄.횟수.본건.성범죄.KSORAS_5.2..), KSORAS_6=as.factor(data$폭력범죄.횟수.KSORAS_6.), KSORAS_7=as.factor(data$총.시설.수용.기간.KSORAS_7.), KSORAS_8=as.factor(data$감독기간내문제행동여부.KSORAS_8.),
+                       KSORAS_9=as.factor(data$본범행피해자의만나이.KSORAS_9.), KSORAS_10=as.factor(data$본범행피해자와의관계.KSORAS_10.), KSORAS_11=as.factor(data$본범행피해자의성별.KSORAS_11.), KSORAS_12=as.factor(data$본범행피검사자.가해자.와피해자의나이차.KSORAS_12.), KSORAS_13=as.factor(data$본범행폭력사용.KSORAS_13.),
+                       KSORAS_14=as.factor(data$본범행회복불가능한피해.KSORAS_14.), KSORAS_15=as.factor(data$본범행디지털성범죄여부.KSORAS_15.), KSORAS_16=as.factor(data$본범행에대한책임수용.KSORAS_16.),
+                       범행미수여부=as.factor(data$범행미수여부.범행을저지르다가중도에그친경우.), 피해자와의관계=as.factor(data$피해자와의관계), 범행시간대=as.factor(data$범행시간대), 
+                       
+                       # 범주형 변수 : 위, 숫자형 변수 : 아래
+                       
+                       나이=as.numeric(data$나이), 본건이전_총입건횟수=as.numeric(data$본건이전_총입건횟수.현재저지른범죄를제외하고저지른모든범죄건수.), 
+                       본건이전_성범죄전력횟수=as.numeric(data$본건이전_성범죄전력횟수), 본건이전_폭력범죄입건횟수=as.numeric(data$본건이전_폭력범죄입건횟수), 본건이전_준수사항위반횟수=as.numeric(data$본건이전_준수사항위반횟수.판사가지정한규칙을어긴횟수..ex..밤.9시에돌아다니면안됨등),
+                       본건피해자수=as.numeric(data$본건피해자수), 경고횟수=as.numeric(data$경고횟수.보호관찰을받는기간중규칙을어기는행위를저지르면경고를받게됨.), 수사의뢰요청횟수=as.numeric(data$수사의뢰요청횟수.보호관찰을받는도중다른범죄를저질렀다는의구심이생기거나그런일에휘말리게되면수사의뢰요청이들어오게됨.),
+                       범행당시나이=as.numeric(data$범행당시나이), 
+                       최초입건나이=as.numeric(data$최초입건나이.처음.범죄를.저지른.당시.나이.), 본건피해자만나이=as.numeric(data$본건_피해자_만나이), 본건피해자나이차=as.numeric(data$본건_피해자_나이차), 본건공범의수=as.numeric(data$본건_공범의수), 보호관찰경력횟수=as.numeric(data$보호관찰경력횟수), 
+                       문서사건수=as.numeric(data$문서사건수.문서상으로드러난범죄의수.암수범죄미포함..))
+
+# 제거 변수
+# 1) KSORAS_5_합 : KSORAS_5_1과 KSORAS_5_2에 이미 정보가 있기 때문에 제거(KSORAS_5_합은 KSORAS_5_1과 KSORAS_5_2를 합한 변수)
+# 2) 재범횟수 : 종속변수인 재범여부 변수와 같은 의미의 변수이므로 제거
+# 3) 재범1_동종여부, 피해자성별 : 결측치가 25개 이상이므로 제거(10% 비율)
+
+summary(data) # 기초통계분석(총 55개 변수)
+
+
+
+
+
+##### 모델링
+
+### training set, test set 나누기
+
+library(caret)
+
+table(data$재범여부)
+
+# 1) 무작위 추출
+
+# set.seed(12345)
+# sample <- sample(1:nrow(data), nrow(data)*0.8) # 데이터 수가 적으므로 학습에 많은 데이터 사용(주로 0.6, 0.7, 0.8 사용)
+# train_r <- data[sample, ]
+# test_r <- data[-sample, ]
+# prop.table(table(train_r$재범여부)) # 비율 확인
+
+# 2) 층화 임의 추출법
+
+set.seed(20210202)
+partition <- createDataPartition(y=data$재범여부, p=0.8, list=FALSE) # 종속변수의 계층 별로 비율을 동일하고 랜덤하게 뽑아줌
+train_p <- data[partition, ]
+test_p <- data[-partition, ]
+prop.table(table(train_p$재범여부))
+
+
+
+### 1. tree 패키지 이용
+
+# library(tree)
+
+# treemod <- tree(재범여부~., data=train_r)
+# plot(treemod)
+# text(treemod, pretty=0, cex=0.7)
+# title(main = "Unpruned Classification Tree")
+# summary(treemod)
+
+# 예측 & 모델 평가
+
+# library(e1071)
+
+# treepred_unp <- predict(treemod, test_r, type='class')
+# confusionMatrix(treepred_unp, test_r$재범여부)
+
+# 가지치기(Pruning)
+
+# cv.trees <- cv.tree(treemod, FUN=prune.misclass, K=5) # K : The number of folds of the cross-validation(주로 5 또는 10 사용)
+# plot(cv.trees)
+
+# prune.trees <- prune.misclass(treemod, best=which.min(cv.trees$dev))
+# plot(prune.trees)
+# text(prune.trees, pretty=0, cex=.7)
+# title(main = "Pruned Classification Tree")
+# summary(prune.trees)
+
+# 가지치기 후 예측 & 모델 평가
+
+# library(e1071)
+
+# treepred <- predict(prune.trees, test_r, type='class')
+# confusionMatrix(treepred, test_r$재범여부)
+
+
+
+### 2. rpart 패기지 이용
+
+library(rpart)
+library(rpart.plot)
+
+rpartmod <- rpart(재범여부~., data=train_p, method='class')
+rpart.plot(rpartmod, main="Unpruned Classification Tree", cex=0.75, box.palette=c("Greys", "Oranges"), branch.lty=5, shadow.col="gray")
+# summary(rpartmod)
+
+# 최초 예측 & 모델 평가
+
+un_rpartpred <- predict(rpartmod, test_p, type='class')
+confusionMatrix(un_rpartpred, test_p$재범여부)
+
+# 하이퍼 파라미터 튜닝 : Grid Search 이용
+
+library(tidyverse)
+library(dplyr)
+
+rpartmod$control
+
+gs <- list(minsplit = c(2, 4, 6, 8, 10, 15, 20, 25, 30),
+           cp = c(0, 0.1),
+           #           maxcompete = c(0, 4, 8, 12, 16), 
+           #           maxsurrogate = c(0, 5, 10, 15, 20),
+           #           usesurrogate = c(0, 1, 2),
+           #           surrogatestyle = c(0, 1),
+           maxdepth = c(2, 4, 6, 8, 10, 15, 20, 25, 30)) %>% cross_df()
+
+mod <- function(...){
+  rpart(재범여부~., data = train_p, method='class', control = rpart.control(...))
+}
+
+gs <- gs %>% mutate(fit = pmap(gs, mod))
+
+compute_accuracy <- function(fit, test_features, test_labels){
+  predicted <- predict(fit, test_features, type = "class")
+  mean(predicted == test_labels)
+}
+
+test_features <- subset(test_p, select=-재범여부)
+test_labels <- test_p$재범여부
+
+options("scipen" = 100)
+gs <- gs %>% mutate(test_accuracy = map_dbl(fit, compute_accuracy, test_features, test_labels))
+control <- rpart.control(minsplit = 10, cp = 0, maxdepth = 30)
+rpartmod <- rpart(재범여부~., data=train_p, method='class', control=control)
+rpart.plot(rpartmod, main="Unpruned Hyperparameter Tuning Classification Tree", cex=0.75, box.palette=c("Greys", "Oranges"), branch.lty=5, shadow.col="gray")
+# summary(rpartmod)
+
+rpartpred <- predict(rpartmod, test_p, type='class')
+confusionMatrix(rpartpred, test_p$재범여부)
+
+# 가지치기(Pruning)
+
+printcp(rpartmod)
+plotcp(rpartmod)
+
+cp <- rpartmod$cptable[which.min(rpartmod$cptable[, "xerror"]),"CP"]
+ptree <- prune(rpartmod, cp=cp)
+rpart.plot(ptree, main="Pruned Hyperparameter Tuning Classification Tree", cex=0.75, box.palette=c("Greys", "Oranges"), branch.lty=5, shadow.col="gray")
+# summary(ptree)
+
+# 가지치기 후 예측 & 모델 평가
+
+rpartpred <- predict(ptree, test_p, type='class')
+confusionMatrix(rpartpred, test_p$재범여부)
+
+
+
+
+
+##### 랜덤포레스트(Random Forest) #####
+
+library(randomForest)
+
+rf_fit <- randomForest(재범여부~., data=train_p, importance=TRUE, na.action=na.roughfix) # 범주형 결측치는 최빈값, 연속형 결측치는 평균으로 대체
+
+# 예측 & 모델 평가
+
+y_pred <- predict(rf_fit, test_p, type='class')
+confusionMatrix(y_pred, test_p$재범여부)
+
+# 시각화 : Feature Importance
+
+varImpPlot(rf_fit, pch=19, col=1, cex=1, main="Feature Importance")
+
+# 1. 하이퍼 파라미터 튜닝(Grid Search)
+
+customRF <- list(type = "Classification", library = "randomForest", loop = NULL)
+customRF$parameters <- data.frame(parameter = c("mtry", "ntree"), class = rep("numeric", 2), label = c("mtry", "ntree"))
+customRF$grid <- function(x, y, len = NULL, search = "grid") {}
+customRF$fit <- function(x, y, wts, param, lev, last, weights, classProbs) {
+   randomForest(x, y, mtry = param$mtry, ntree=param$ntree)
+ }
+ customRF$predict <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+   predict(modelFit, newdata)
+ customRF$prob <- function(modelFit, newdata, preProc = NULL, submodels = NULL)
+   predict(modelFit, newdata, type = "prob")
+ customRF$sort <- function(x) x[order(x[,1]),]
+ customRF$levels <- function(x) x$classes
+
+ control <- trainControl(method="repeatedcv", number=5, repeats=5, search='grid', allowParallel=TRUE)
+ tunegrid <- expand.grid(.mtry=c(1:20), .ntree=c(250, 500, 750, 1000, 2500, 5000, 10000))
+ start_time <- Sys.time()
+ custom <- train(재범여부~., data=train_p, method=customRF, metric='Accuracy', tuneGrid=tunegrid, trControl=control, na.action=na.roughfix)
+ end_time <- Sys.time()
+ end_time - start_time
+ print(custom)
+ plot(custom)
+
+# 재모델링
+
+rf_refit <- randomForest(재범여부~., data=train_p, mtry=20, ntree=10000, importance=TRUE, na.action=na.roughfix)
+
+# 예측 & 모델 평가
+
+y_repred <- predict(rf_refit, test_p, type='class')
+confusionMatrix(y_repred, test_p$재범여부)
+
+# 시각화 : Feature Importance
+
+varImpPlot(rf_refit, pch=19, col=1, cex=1, main="Feature Importance")
+
+# 2. 하이퍼 파라미터 튜닝(Random Search)
+
+# control <- trainControl(method='repeatedcv', number=10, repeats=3, search='random')
+# set.seed(20210203)
+# rf_random <- train(재범여부~., data=train_r, method='rf', metric='Accuracy', tuneLength=100, trControl=control)
+# print(rf_random)
+# plot(rf_random)
